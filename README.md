@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # KrashiAI - Smart Farming Platform 🌱
 
 An AI-powered smart farming platform designed to empower farmers with data-driven insights. Built with a modern, simple, and responsive UI.
@@ -72,3 +73,7 @@ This project is Vite-based and highly optimized for Vercel deployment.
 ## Important Notes 💡
 - The application currently uses **mock data** to emulate AI predictions. Once backend endpoints are established, simply replace the `setTimeout` mock calls with proper `axios.post` / `axios.get` calls in the respective pages (e.g. `CropDiseasePage.jsx` and `SoilFertilityPage.jsx`).
 - Routing is secured by a mock `ProtectedRoute` wrapper in `App.jsx`. Change `isAuthenticated` variable logic to actual Redux/Context auth state.
+=======
+# Smart_Krashi
+Smart Krashi - Empowering Farmers with AI
+>>>>>>> 111e89ac2628907918cd93e366569e689916835e
