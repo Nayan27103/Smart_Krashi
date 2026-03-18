@@ -4,6 +4,12 @@ from .models import Disease
 from .serializers import DiseaseSerializer
 
 class DiseaseViewSet(viewsets.ModelViewSet):
-    queryset = Disease.objects.all()
     serializer_class = DiseaseSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Disease.objects.all()
+        crop_name = self.request.query_params.get('crop', None)
+        if crop_name:
+            queryset = queryset.filter(crop__name__icontains=crop_name)
+        return queryset

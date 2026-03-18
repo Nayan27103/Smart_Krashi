@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Search, ArrowRight, MapPin } from 'lucide-react';
+import { TrendingUp, TrendingDown, Search, ArrowRight, MapPin, Loader2 } from 'lucide-react';
+import api from '../../api/axios';
 
 const mockData = [
     { date: '1 Mar', price: 2100 },
@@ -16,10 +17,37 @@ const MandiPricePage = () => {
     const [selectedCrop, setSelectedCrop] = useState('wheat');
     const [selectedMandi, setSelectedMandi] = useState('indore');
     const [showData, setShowData] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [predictionResult, setPredictionResult] = useState(null);
+    const [error, setError] = useState('');
 
-    const handleSearch = (e) => {
+    const handleSearch = async (e) => {
         e.preventDefault();
-        setShowData(true);
+        setIsLoading(true);
+        setError('');
+        try {
+            // Simulated current price based on the crop
+            const currentPriceMap = {
+                wheat: 2280,
+                rice: 3150,
+                soyabean: 4800,
+                cotton: 6200
+            };
+
+            const response = await api.post('/predict-price/', {
+                crop_name: selectedCrop,
+                mandi_location: selectedMandi,
+                price: currentPriceMap[selectedCrop] || 2000
+            });
+
+            setPredictionResult(response.data);
+            setShowData(true);
+        } catch (err) {
+            setError('Unable to fetch live prices. Please try again later.');
+            setShowData(false);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -67,41 +95,47 @@ const MandiPricePage = () => {
 
                     <button
                         type="submit"
-                        className="bg-primary-600 text-white rounded-2xl px-10 py-4 font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/30 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2 whitespace-nowrap"
+                        disabled={isLoading}
+                        className="bg-primary-600 text-white rounded-2xl px-10 py-4 font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/30 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                        Check Prices
+                        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Check Prices'}
                     </button>
                 </form>
             </div>
 
-            {showData && (
+            {error && (
+                <div className="bg-red-50 text-red-600 p-4 rounded-2xl border border-red-100 text-sm font-medium">
+                    {error}
+                </div>
+            )}
+
+            {showData && predictionResult && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in slide-in-from-bottom-8 duration-500">
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none transform translate-x-4 -translate-y-4">
                                 <TrendingUp className="h-32 w-32" />
                             </div>
-                            <h3 className="text-green-100 font-semibold uppercase tracking-wider mb-2 relative z-10">Current Live Price</h3>
-                            <p className="text-5xl font-extrabold mb-1 relative z-10">₹2,280</p>
+                            <h3 className="text-green-100 font-semibold uppercase tracking-wider mb-2 relative z-10 uppercase">{predictionResult.crop} Live Price</h3>
+                            <p className="text-5xl font-extrabold mb-1 relative z-10">₹{predictionResult.current_price.toLocaleString()}</p>
                             <p className="text-green-200 font-medium mb-8 relative z-10">Per Quintal (100kg)</p>
 
                             <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-xl backdrop-blur-md w-max relative z-10">
                                 <TrendingUp className="h-5 w-5" />
-                                <span className="font-bold">+₹30 (+1.3%)</span>
-                                <span className="text-xs ml-1 opacity-80">vs yesterday</span>
+                                <span className="font-bold">AI Prediction: ₹{predictionResult.predicted_price.toLocaleString()}</span>
                             </div>
                         </div>
 
                         <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-100">
-                            <h3 className="text-slate-800 font-bold text-xl mb-6">Price Details</h3>
+                            <h3 className="text-slate-800 font-bold text-xl mb-6">Market Details</h3>
                             <ul className="space-y-4">
                                 <li className="flex justify-between items-center py-2 border-b border-slate-100">
-                                    <span className="text-slate-500 font-medium">Minimum Price</span>
-                                    <span className="font-bold text-slate-900">₹2,100</span>
+                                    <span className="text-slate-500 font-medium">Market Location</span>
+                                    <span className="font-bold text-slate-900 uppercase">{predictionResult.mandi}</span>
                                 </li>
                                 <li className="flex justify-between items-center py-2 border-b border-slate-100">
-                                    <span className="text-slate-500 font-medium">Maximum Price</span>
-                                    <span className="font-bold text-slate-900">₹2,350</span>
+                                    <span className="text-slate-500 font-medium">Expected Price</span>
+                                    <span className="font-bold text-green-600">₹{predictionResult.predicted_price}</span>
                                 </li>
                                 <li className="flex justify-between items-center py-2 border-b border-slate-100">
                                     <span className="text-slate-500 font-medium">Arrival Volume</span>
@@ -119,11 +153,10 @@ const MandiPricePage = () => {
                                 AI Suggestion
                             </h3>
                             <p className="text-amber-800 leading-relaxed font-medium mb-6">
-                                Prices are showing an upward trend. Holding your stock for another 3-5 days could yield a 5% higher return based on historical arrival patterns.
+                                {predictionResult.predicted_price > predictionResult.current_price 
+                                    ? "Prices are showing an upward trend. Holding your stock for another 3-5 days could yield a higher return."
+                                    : "Prices might stabilize soon. Consider selling if you have reached your target margin."}
                             </p>
-                            <button className="flex items-center gap-2 font-bold text-amber-700 hover:text-amber-800 group">
-                                View detailed forecast <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                            </button>
                         </div>
                     </div>
 
@@ -131,7 +164,7 @@ const MandiPricePage = () => {
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h3 className="text-2xl font-bold text-slate-900">Historical Price Trend</h3>
-                                <p className="text-slate-500 font-medium mt-1">Past 7 Days - {selectedMandi.toUpperCase()}</p>
+                                <p className="text-slate-500 font-medium mt-1">Past 7 Days - {predictionResult.mandi.toUpperCase()}</p>
                             </div>
                             <div className="flex gap-2">
                                 <button className="px-4 py-2 text-sm font-bold bg-primary-50 text-primary-600 border border-primary-100 rounded-xl hover:bg-primary-100 transition">7D</button>

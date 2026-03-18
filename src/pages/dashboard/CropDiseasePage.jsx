@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { UploadCloud, CheckCircle2, AlertCircle, X, Microscope } from 'lucide-react';
+import { UploadCloud, CheckCircle2, AlertCircle, X, Microscope, Loader2 } from 'lucide-react';
+import api from '../../api/axios';
 
 const CropDiseasePage = () => {
     const [file, setFile] = useState(null);
     const [analyzing, setAnalyzing] = useState(false);
     const [result, setResult] = useState(null);
     const [dragActive, setDragActive] = useState(false);
+    const [error, setError] = useState('');
 
     const handleDrag = (e) => {
         e.preventDefault();
@@ -26,26 +28,42 @@ const CropDiseasePage = () => {
         }
     };
 
-    const analyzeImage = () => {
+    const analyzeImage = async () => {
         if (!file) return;
         setAnalyzing(true);
-        // Mock API call
-        setTimeout(() => {
-            setAnalyzing(false);
-            setResult({
-                disease: 'Early Blight',
-                confidence: 94.5,
-                cause: 'Fungus Alternaria solani, favored by high humidity and warm temperatures.',
-                treatment: 'Apply a copper-based fungicide or chlorothalonil. Ensure proper spacing between plants for airflow.',
-                recommendedPesticide: 'Bayer Serenade ASO',
-                price: '₹450 / 500ml',
+        setError('');
+        
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const response = await api.post('/predict-disease/', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
             });
-        }, 2000);
+            
+            setResult({
+                disease: response.data.disease || 'Healthy',
+                confidence: (response.data.confidence * 100).toFixed(1),
+                cause: 'Analysis based on visual symptoms identified by AI.',
+                treatment: response.data.recommended_pesticides?.length > 0 
+                    ? `Recommended treatment using ${response.data.recommended_pesticides[0].name}. ${response.data.recommended_pesticides[0].dosage}`
+                    : 'No specific disease detected or treatment required.',
+                recommendedPesticides: response.data.recommended_pesticides || []
+            });
+        } catch (err) {
+            setError(err.response?.data?.message || 'Error analyzing image. Please try a clearer photo.');
+            setResult(null);
+        } finally {
+            setAnalyzing(false);
+        }
     };
 
     const reset = () => {
         setFile(null);
         setResult(null);
+        setError('');
     };
 
     return (
@@ -60,10 +78,16 @@ const CropDiseasePage = () => {
                 </div>
             </div>
 
+            {error && (
+                <div className="bg-red-50 text-red-600 p-4 rounded-2xl border border-red-100 text-sm font-medium">
+                    {error}
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Upload Section */}
                 <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 border border-slate-100 h-fit">
-                    <h2 className="text-xl font-bold text-slate-800 mb-6">Upload Image</h2>
+                    <h2 className="text-xl font-bold text-slate-800 mb-6 font-primary">Upload Image</h2>
 
                     {!file ? (
                         <div
@@ -107,7 +131,12 @@ const CropDiseasePage = () => {
                                     analyzing ? 'bg-primary-500 text-white animate-pulse' :
                                         'bg-primary-600 text-white hover:bg-primary-700 hover:-translate-y-1 shadow-primary-500/30'}`}
                         >
-                            {analyzing ? 'Analyzing Image...' : 'Analyze with AI'}
+                            {analyzing ? (
+                                <>
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    Analyzing Image...
+                                </>
+                            ) : 'Analyze with AI'}
                         </button>
                     </div>
                 </div>
@@ -117,11 +146,13 @@ const CropDiseasePage = () => {
                     {result ? (
                         <div className="bg-white rounded-[2rem] p-8 shadow-xl border border-slate-100 h-full flex flex-col">
                             <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
-                                <div className="bg-red-100 p-4 rounded-2xl flex-shrink-0">
-                                    <AlertCircle className="h-8 w-8 text-red-600" />
+                                <div className={`${result.disease === 'Healthy' ? 'bg-green-100' : 'bg-red-100'} p-4 rounded-2xl flex-shrink-0`}>
+                                    {result.disease === 'Healthy' ? <CheckCircle2 className="h-8 w-8 text-green-600" /> : <AlertCircle className="h-8 w-8 text-red-600" />}
                                 </div>
                                 <div>
-                                    <h2 className="text-sm font-bold text-red-600 tracking-wider uppercase mb-1">Disease Detected</h2>
+                                    <h2 className={`text-sm font-bold tracking-wider uppercase mb-1 ${result.disease === 'Healthy' ? 'text-green-600' : 'text-red-600'}`}>
+                                        {result.disease === 'Healthy' ? 'Analysis Complete' : 'Disease Detected'}
+                                    </h2>
                                     <p className="text-3xl font-extrabold text-slate-900">{result.disease}</p>
                                 </div>
                             </div>
@@ -148,21 +179,23 @@ const CropDiseasePage = () => {
                                     <h4 className="font-bold text-green-900 mb-2 flex items-center gap-2">
                                         <CheckCircle2 className="h-5 w-5 text-green-600" /> Suggested Treatment
                                     </h4>
-                                    <p className="text-green-800 text-sm leading-relaxed">{result.treatment}</p>
+                                    <p className="text-green-800 text-sm leading-relaxed font-primary">{result.treatment}</p>
                                 </div>
 
-                                <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100 border-dashed">
-                                    <h4 className="font-bold text-blue-900 mb-1">Recommended Product</h4>
-                                    <div className="flex justify-between items-center mt-3">
-                                        <div>
-                                            <p className="text-blue-800 font-semibold text-lg">{result.recommendedPesticide}</p>
-                                            <p className="text-blue-600 text-sm font-medium">{result.price}</p>
+                                {result.recommendedPesticides.length > 0 && result.recommendedPesticides.map((p, idx) => (
+                                    <div key={idx} className="bg-blue-50 rounded-2xl p-5 border border-blue-100 border-dashed">
+                                        <h4 className="font-bold text-blue-900 mb-1">Recommended Product</h4>
+                                        <div className="flex justify-between items-center mt-3">
+                                            <div>
+                                                <p className="text-blue-800 font-semibold text-lg">{p.name}</p>
+                                                <p className="text-blue-600 text-sm font-medium">₹{p.market_price} / unit</p>
+                                            </div>
+                                            <button className="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 transition">
+                                                Buy Now
+                                            </button>
                                         </div>
-                                        <button className="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 transition">
-                                            Buy Now
-                                        </button>
                                     </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
                     ) : (

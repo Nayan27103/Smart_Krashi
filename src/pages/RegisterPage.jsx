@@ -1,12 +1,37 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Leaf, Lock, Mail, User, Phone } from 'lucide-react';
 
+import { useState } from 'react';
+import api from '../api/axios';
+
 const RegisterPage = () => {
     const navigate = useNavigate();
+    const [formData, setFormData] = useState({
+        first_name: '',
+        last_name: '',
+        phone_number: '',
+        email: '',
+        password: '',
+    });
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleRegister = (e) => {
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleRegister = async (e) => {
         e.preventDefault();
-        navigate('/login'); // Mock action
+        setIsLoading(true);
+        setError('');
+        try {
+            await api.post('/auth/register/', formData);
+            navigate('/login');
+        } catch (err) {
+            setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -27,6 +52,11 @@ const RegisterPage = () => {
                 </div>
 
                 <form className="mt-8 space-y-6" onSubmit={handleRegister}>
+                    {error && (
+                        <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm border border-red-100">
+                            {error}
+                        </div>
+                    )}
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -37,6 +67,9 @@ const RegisterPage = () => {
                                     </div>
                                     <input
                                         type="text"
+                                        name="first_name"
+                                        value={formData.first_name}
+                                        onChange={handleChange}
                                         required
                                         className="appearance-none rounded-xl relative block w-full px-3 py-3 pl-10 border border-slate-200 placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm bg-slate-50/50 transition"
                                         placeholder="First"
@@ -47,6 +80,9 @@ const RegisterPage = () => {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
                                 <input
                                     type="text"
+                                    name="last_name"
+                                    value={formData.last_name}
+                                    onChange={handleChange}
                                     required
                                     className="appearance-none rounded-xl relative block w-full px-3 py-3 border border-slate-200 placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm bg-slate-50/50 transition"
                                     placeholder="Last"
@@ -62,6 +98,9 @@ const RegisterPage = () => {
                                 </div>
                                 <input
                                     type="tel"
+                                    name="phone_number"
+                                    value={formData.phone_number}
+                                    onChange={handleChange}
                                     required
                                     className="appearance-none rounded-xl relative block w-full px-3 py-3 pl-10 border border-slate-200 placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm bg-slate-50/50 transition"
                                     placeholder="+91 00000 00000"
@@ -77,6 +116,9 @@ const RegisterPage = () => {
                                 </div>
                                 <input
                                     type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
                                     required
                                     className="appearance-none rounded-xl relative block w-full px-3 py-3 pl-10 border border-slate-200 placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm bg-slate-50/50 transition"
                                     placeholder="name@example.com"
@@ -92,6 +134,9 @@ const RegisterPage = () => {
                                 </div>
                                 <input
                                     type="password"
+                                    name="password"
+                                    value={formData.password}
+                                    onChange={handleChange}
                                     required
                                     className="appearance-none rounded-xl relative block w-full px-3 py-3 pl-10 border border-slate-200 placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm bg-slate-50/50 transition"
                                     placeholder="••••••••"
@@ -103,9 +148,10 @@ const RegisterPage = () => {
                     <div>
                         <button
                             type="submit"
-                            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 shadow-lg shadow-primary-500/30 transition-all transform hover:-translate-y-0.5"
+                            disabled={isLoading}
+                            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 shadow-lg shadow-primary-500/30 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                            Create Account
+                            {isLoading ? 'Creating Account...' : 'Create Account'}
                         </button>
                     </div>
 

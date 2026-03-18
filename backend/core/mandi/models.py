@@ -9,6 +9,7 @@ class MarketPrice(models.Model):
     mandi_location = models.CharField(max_length=100)
 
     price = models.FloatField()
+    predicted_price = models.FloatField(blank=True, null=True)
     date = models.DateField(default=timezone.now)
 
     created_at = models.DateTimeField(auto_now_add=True)

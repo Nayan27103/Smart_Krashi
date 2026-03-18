@@ -1,10 +1,11 @@
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
     Leaf, Home, Search, MapPin, SearchCheck, User, Shield,
     Settings, LogOut, Sun, CloudRain, Droplets
 } from 'lucide-react';
 
 const Sidebar = ({ isAdmin }) => {
+    const navigate = useNavigate();
     const farmerLinks = [
         { to: "/dashboard", icon: Home, label: "Overview" },
         { to: "/dashboard/crop-disease", icon: SearchCheck, label: "Crop Disease" },
@@ -23,6 +24,12 @@ const Sidebar = ({ isAdmin }) => {
     ];
 
     const links = isAdmin ? adminLinks : farmerLinks;
+
+    const handleLogout = () => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        navigate('/login');
+    };
 
     return (
         <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col h-full shadow-sm relative z-20">
@@ -69,13 +76,13 @@ const Sidebar = ({ isAdmin }) => {
             </div>
 
             <div className="p-4 border-t border-slate-100">
-                <Link
-                    to="/"
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors group"
+                <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-3 px-3 py-3 rounded-xl text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors group text-left"
                 >
                     <LogOut className="h-5 w-5 text-slate-400 group-hover:text-red-500" />
                     <span>Logout</span>
-                </Link>
+                </button>
             </div>
         </aside>
     );

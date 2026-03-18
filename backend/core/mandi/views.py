@@ -12,9 +12,9 @@ class MandiPricePredictionView(APIView):
         serializer = MarketPriceSerializer(data=request.data)
 
         if serializer.is_valid():
-            current_price = serializer.validated_data['current_price']
+            price = serializer.validated_data['price']
 
-            predicted_price = predict_price(current_price)
+            predicted_price = predict_price(price)
 
             market = serializer.save(
                 user=request.user,
@@ -25,7 +25,7 @@ class MandiPricePredictionView(APIView):
                 "message": "Price Prediction Successful",
                 "crop": market.crop_name,
                 "mandi": market.mandi_location,
-                "current_price": current_price,
+                "current_price": price,
                 "predicted_price": predicted_price
             })
 
