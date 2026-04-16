@@ -1,6 +1,6 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Leaf, Lock, Mail } from 'lucide-react';
-import { useState } from 'react';
 import api from '../api/axios';
 
 const LoginPage = () => {
@@ -15,9 +15,16 @@ const LoginPage = () => {
         setIsLoading(true);
         setError('');
         try {
+            // Mapping email to username for SimpleJWT standard behavior if needed
+            // But if the backend is configured with USERNAME_FIELD='email', then sending email is fine.
+            // Side B sent: { username: email, password }.
+            // Let's send both to be safe or just email if that works.
             const response = await api.post('/auth/login/', { email, password });
+            
+            // Side B used 'token' and 'refresh', but axios.js uses 'access_token' and 'refresh_token'
             localStorage.setItem('access_token', response.data.access);
             localStorage.setItem('refresh_token', response.data.refresh);
+            
             navigate('/dashboard');
         } catch (err) {
             setError(err.response?.data?.detail || 'Invalid email or password');
@@ -28,7 +35,6 @@ const LoginPage = () => {
 
     return (
         <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-            {/* Decorative blobs */}
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-200 rounded-full blur-[100px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
             <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-200 rounded-full blur-[100px] opacity-20 translate-y-1/2 -translate-x-1/2"></div>
 
@@ -47,7 +53,7 @@ const LoginPage = () => {
 
                 <form className="mt-8 space-y-6" onSubmit={handleLogin}>
                     {error && (
-                        <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm border border-red-100">
+                        <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm border border-red-100 text-center">
                             {error}
                         </div>
                     )}

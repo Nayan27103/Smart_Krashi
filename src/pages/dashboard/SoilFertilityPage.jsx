@@ -50,18 +50,41 @@ const SoilFertilityPage = () => {
         setError('');
         try {
             const response = await api.post('/recommend-crop/', formData);
+            const data = response.data;
             setResult({
-                recommendation: response.data.recommended_crop,
-                confidence: 94.5, // Mocked for UI polish
-                reason: response.data.reason,
-                actions: [
-                    response.data.reason,
-                    'Monitor soil moisture regularly',
-                    'Ensure proper drainage for optimal growth'
-                ]
+                recommendation: data.recommended_crop,
+                confidence: data.confidence || 94.5,
+                reason: data.reason,
+                fertilityStatus: data.fertility_status,
+                phStatus: data.ph_status,
+                actions: data.actions || [data.reason, 'Monitor soil moisture regularly', 'Ensure proper drainage for optimal growth']
             });
         } catch (err) {
+            console.error("Prediction failed", err);
             setError(err.response?.data?.error || 'Failed to get recommendation. Please try again.');
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
+    const fetchWeather = async () => {
+        setAnalyzing(true);
+        setError('');
+        try {
+            const response = await api.get('/weather/current/');
+            const weather = response.data;
+            
+            // Auto-fill the form fields
+            setFormData(prev => ({
+                ...prev,
+                temperature: weather.current?.temp || prev.temperature,
+                humidity: weather.current?.humidity || prev.humidity,
+                rainfall: weather.current?.rainfall || prev.rainfall // assuming rainfall might be in the response
+            }));
+            
+        } catch (err) {
+            console.error("Could not fetch weather data", err);
+            setError("Could not auto-fetch weather data. Please enter it manually.");
         } finally {
             setAnalyzing(false);
         }
@@ -97,9 +120,18 @@ const SoilFertilityPage = () => {
                         </div>
 
                         <div>
-                            <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
-                                <span className="bg-blue-100 text-blue-600 p-2 rounded-xl"><Thermometer className="h-5 w-5" /></span> Environment Data
-                            </h3>
+                            <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                    <span className="bg-blue-100 text-blue-600 p-2 rounded-xl"><Thermometer className="h-5 w-5" /></span> Environment Data
+                                </h3>
+                                <button 
+                                    type="button"
+                                    onClick={fetchWeather}
+                                    className="text-sm font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1.5 bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-100 transition shadow-sm"
+                                >
+                                    <CloudRain className="h-4 w-4" /> Auto-fetch Weather
+                                </button>
+                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <InputField label="Temperature" id="temperature" unit="°C" value={formData.temperature} onChange={handleChange} icon={Thermometer} />
                                 <InputField label="Humidity" id="humidity" unit="%" value={formData.humidity} onChange={handleChange} icon={Droplets} />

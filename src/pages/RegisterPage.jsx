@@ -1,7 +1,6 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Leaf, Lock, Mail, User, Phone } from 'lucide-react';
-
-import { useState } from 'react';
 import api from '../api/axios';
 
 const RegisterPage = () => {
@@ -26,6 +25,7 @@ const RegisterPage = () => {
         setError('');
         try {
             await api.post('/auth/register/', formData);
+            alert('Account created successfully! Please sign in.');
             navigate('/login');
         } catch (err) {
             setError(err.response?.data?.detail || 'Registration failed. Please try again.');
@@ -51,12 +51,13 @@ const RegisterPage = () => {
                     </p>
                 </div>
 
+                {error && (
+                    <div className="mt-4 p-4 bg-red-50 border border-red-100 text-red-700 text-sm rounded-xl text-center">
+                        {error}
+                    </div>
+                )}
+
                 <form className="mt-8 space-y-6" onSubmit={handleRegister}>
-                    {error && (
-                        <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm border border-red-100">
-                            {error}
-                        </div>
-                    )}
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>

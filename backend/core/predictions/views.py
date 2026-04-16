@@ -17,7 +17,13 @@ class DiseasePredictionView(APIView):
             image = serializer.validated_data['image']
 
             # Call AI logic
-            disease, confidence = predict_disease(image)
+            disease, confidence, error_message = predict_disease(image)
+
+            if error_message:
+                return Response({"error": error_message}, status=400)
+
+            if not disease:
+                return Response({"error": "Unable to identify the disease. Please ensure the plant leaf is clearly visible."}, status=400)
 
             prediction = serializer.save(
                 user=request.user,
@@ -26,7 +32,7 @@ class DiseasePredictionView(APIView):
             )
 
             # Get pesticides
-            pesticides = disease.pesticides.all() if disease else []
+            pesticides = disease.pesticides.all()
 
             pesticide_list = [
                 {
@@ -40,7 +46,7 @@ class DiseasePredictionView(APIView):
 
             return Response({
                 "message": "Prediction successful",
-                "disease": disease.name if disease else None,
+                "disease": disease.name,
                 "confidence": confidence,
                 "recommended_pesticides": pesticide_list,
                 "image": prediction.image.url

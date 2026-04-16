@@ -32,7 +32,8 @@ const CropDiseasePage = () => {
         if (!file) return;
         setAnalyzing(true);
         setError('');
-        
+        setResult(null);
+
         const formData = new FormData();
         formData.append('image', file);
 
@@ -43,17 +44,19 @@ const CropDiseasePage = () => {
                 },
             });
             
+            const data = response.data;
             setResult({
-                disease: response.data.disease || 'Healthy',
-                confidence: (response.data.confidence * 100).toFixed(1),
-                cause: 'Analysis based on visual symptoms identified by AI.',
-                treatment: response.data.recommended_pesticides?.length > 0 
-                    ? `Recommended treatment using ${response.data.recommended_pesticides[0].name}. ${response.data.recommended_pesticides[0].dosage}`
+                disease: data.disease || 'Healthy',
+                confidence: data.confidence,
+                cause: data.cause || 'Analysis based on visual symptoms identified by AI.',
+                treatment: data.recommended_pesticides?.length > 0 
+                    ? `Recommended treatment using ${data.recommended_pesticides[0].name}. ${data.recommended_pesticides[0].safety_instructions || data.recommended_pesticides[0].dosage}`
                     : 'No specific disease detected or treatment required.',
-                recommendedPesticides: response.data.recommended_pesticides || []
+                recommendedPesticides: data.recommended_pesticides || []
             });
         } catch (err) {
-            setError(err.response?.data?.message || 'Error analyzing image. Please try a clearer photo.');
+            console.error("Analysis failed", err);
+            setError(err.response?.data?.message || err.message || 'Error analyzing image. Please try a clearer photo.');
             setResult(null);
         } finally {
             setAnalyzing(false);
@@ -87,7 +90,7 @@ const CropDiseasePage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Upload Section */}
                 <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 border border-slate-100 h-fit">
-                    <h2 className="text-xl font-bold text-slate-800 mb-6 font-primary">Upload Image</h2>
+                    <h2 className="text-xl font-bold text-slate-800 mb-6">Upload Image</h2>
 
                     {!file ? (
                         <div
@@ -144,7 +147,7 @@ const CropDiseasePage = () => {
                 {/* Results Section */}
                 <div className={`transition-all duration-500 ${result ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 hidden lg:block lg:opacity-50'}`}>
                     {result ? (
-                        <div className="bg-white rounded-[2rem] p-8 shadow-xl border border-slate-100 h-full flex flex-col">
+                        <div className="bg-white rounded-[2rem] p-8 shadow-xl border border-slate-100 h-full flex flex-col animate-in slide-in-from-right duration-500">
                             <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
                                 <div className={`${result.disease === 'Healthy' ? 'bg-green-100' : 'bg-red-100'} p-4 rounded-2xl flex-shrink-0`}>
                                     {result.disease === 'Healthy' ? <CheckCircle2 className="h-8 w-8 text-green-600" /> : <AlertCircle className="h-8 w-8 text-red-600" />}
@@ -179,10 +182,10 @@ const CropDiseasePage = () => {
                                     <h4 className="font-bold text-green-900 mb-2 flex items-center gap-2">
                                         <CheckCircle2 className="h-5 w-5 text-green-600" /> Suggested Treatment
                                     </h4>
-                                    <p className="text-green-800 text-sm leading-relaxed font-primary">{result.treatment}</p>
+                                    <p className="text-green-800 text-sm leading-relaxed">{result.treatment}</p>
                                 </div>
 
-                                {result.recommendedPesticides.length > 0 && result.recommendedPesticides.map((p, idx) => (
+                                {result.recommendedPesticides && result.recommendedPesticides.length > 0 && result.recommendedPesticides.map((p, idx) => (
                                     <div key={idx} className="bg-blue-50 rounded-2xl p-5 border border-blue-100 border-dashed">
                                         <h4 className="font-bold text-blue-900 mb-1">Recommended Product</h4>
                                         <div className="flex justify-between items-center mt-3">

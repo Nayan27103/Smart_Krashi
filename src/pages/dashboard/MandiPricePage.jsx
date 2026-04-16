@@ -3,22 +3,12 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingUp, TrendingDown, Search, ArrowRight, MapPin, Loader2 } from 'lucide-react';
 import api from '../../api/axios';
 
-const mockData = [
-    { date: '1 Mar', price: 2100 },
-    { date: '2 Mar', price: 2150 },
-    { date: '3 Mar', price: 2130 },
-    { date: '4 Mar', price: 2180 },
-    { date: '5 Mar', price: 2200 },
-    { date: '6 Mar', price: 2250 },
-    { date: '7 Mar', price: 2280 },
-];
-
 const MandiPricePage = () => {
     const [selectedCrop, setSelectedCrop] = useState('wheat');
     const [selectedMandi, setSelectedMandi] = useState('indore');
     const [showData, setShowData] = useState(false);
+    const [marketData, setMarketData] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [predictionResult, setPredictionResult] = useState(null);
     const [error, setError] = useState('');
 
     const handleSearch = async (e) => {
@@ -26,23 +16,11 @@ const MandiPricePage = () => {
         setIsLoading(true);
         setError('');
         try {
-            // Simulated current price based on the crop
-            const currentPriceMap = {
-                wheat: 2280,
-                rice: 3150,
-                soyabean: 4800,
-                cotton: 6200
-            };
-
-            const response = await api.post('/predict-price/', {
-                crop_name: selectedCrop,
-                mandi_location: selectedMandi,
-                price: currentPriceMap[selectedCrop] || 2000
-            });
-
-            setPredictionResult(response.data);
+            const response = await api.get(`/get-prices/?crop=${selectedCrop}&mandi=${selectedMandi}`);
+            setMarketData(response.data);
             setShowData(true);
         } catch (err) {
+            console.error("Mandi fetch failed", err);
             setError('Unable to fetch live prices. Please try again later.');
             setShowData(false);
         } finally {
@@ -109,20 +87,21 @@ const MandiPricePage = () => {
                 </div>
             )}
 
-            {showData && predictionResult && (
+            {showData && marketData && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in slide-in-from-bottom-8 duration-500">
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none transform translate-x-4 -translate-y-4">
                                 <TrendingUp className="h-32 w-32" />
                             </div>
-                            <h3 className="text-green-100 font-semibold uppercase tracking-wider mb-2 relative z-10 uppercase">{predictionResult.crop} Live Price</h3>
-                            <p className="text-5xl font-extrabold mb-1 relative z-10">₹{predictionResult.current_price.toLocaleString()}</p>
+                            <h3 className="text-green-100 font-semibold uppercase tracking-wider mb-2 relative z-10">Current Live Price</h3>
+                            <p className="text-5xl font-extrabold mb-1 relative z-10">₹{marketData.current_price?.toLocaleString()}</p>
                             <p className="text-green-200 font-medium mb-8 relative z-10">Per Quintal (100kg)</p>
 
                             <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-xl backdrop-blur-md w-max relative z-10">
                                 <TrendingUp className="h-5 w-5" />
-                                <span className="font-bold">AI Prediction: ₹{predictionResult.predicted_price.toLocaleString()}</span>
+                                <span className="font-bold">₹{marketData.change} ({marketData.percent_change}%)</span>
+                                <span className="text-xs ml-1 opacity-80">vs yesterday</span>
                             </div>
                         </div>
 
@@ -130,20 +109,20 @@ const MandiPricePage = () => {
                             <h3 className="text-slate-800 font-bold text-xl mb-6">Market Details</h3>
                             <ul className="space-y-4">
                                 <li className="flex justify-between items-center py-2 border-b border-slate-100">
-                                    <span className="text-slate-500 font-medium">Market Location</span>
-                                    <span className="font-bold text-slate-900 uppercase">{predictionResult.mandi}</span>
+                                    <span className="text-slate-500 font-medium">Minimum Price</span>
+                                    <span className="font-bold text-slate-900">₹{marketData.min_price?.toLocaleString()}</span>
                                 </li>
                                 <li className="flex justify-between items-center py-2 border-b border-slate-100">
-                                    <span className="text-slate-500 font-medium">Expected Price</span>
-                                    <span className="font-bold text-green-600">₹{predictionResult.predicted_price}</span>
+                                    <span className="text-slate-500 font-medium">Maximum Price</span>
+                                    <span className="font-bold text-slate-900">₹{marketData.max_price?.toLocaleString()}</span>
                                 </li>
                                 <li className="flex justify-between items-center py-2 border-b border-slate-100">
                                     <span className="text-slate-500 font-medium">Arrival Volume</span>
-                                    <span className="font-bold text-slate-900">1,240 Tonnes</span>
+                                    <span className="font-bold text-slate-900">{marketData.arrival_volume}</span>
                                 </li>
                                 <li className="flex justify-between items-center py-2">
                                     <span className="text-slate-500 font-medium">Quality Grade</span>
-                                    <span className="font-bold text-primary-600 bg-primary-50 px-3 py-1 rounded-lg">A (Premium)</span>
+                                    <span className="font-bold text-primary-600 bg-primary-50 px-3 py-1 rounded-lg">{marketData.quality_grade}</span>
                                 </li>
                             </ul>
                         </div>
@@ -152,10 +131,8 @@ const MandiPricePage = () => {
                             <h3 className="text-amber-900 font-bold text-xl mb-3 flex items-center gap-2">
                                 AI Suggestion
                             </h3>
-                            <p className="text-amber-800 leading-relaxed font-medium mb-6">
-                                {predictionResult.predicted_price > predictionResult.current_price 
-                                    ? "Prices are showing an upward trend. Holding your stock for another 3-5 days could yield a higher return."
-                                    : "Prices might stabilize soon. Consider selling if you have reached your target margin."}
+                            <p className="text-amber-800 leading-relaxed font-medium">
+                                {marketData.ai_suggestion}
                             </p>
                         </div>
                     </div>
@@ -164,17 +141,12 @@ const MandiPricePage = () => {
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h3 className="text-2xl font-bold text-slate-900">Historical Price Trend</h3>
-                                <p className="text-slate-500 font-medium mt-1">Past 7 Days - {predictionResult.mandi.toUpperCase()}</p>
-                            </div>
-                            <div className="flex gap-2">
-                                <button className="px-4 py-2 text-sm font-bold bg-primary-50 text-primary-600 border border-primary-100 rounded-xl hover:bg-primary-100 transition">7D</button>
-                                <button className="px-4 py-2 text-sm font-bold bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition">1M</button>
-                                <button className="px-4 py-2 text-sm font-bold bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition">1Y</button>
+                                <p className="text-slate-500 font-medium mt-1">Past 7 Days - {selectedMandi.toUpperCase()}</p>
                             </div>
                         </div>
                         <div className="h-[400px] w-full mt-4">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={mockData} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
+                                <AreaChart data={marketData.historical_trend || []} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="colorMandiPrice" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#16a34a" stopOpacity={0.3} />
@@ -183,7 +155,7 @@ const MandiPricePage = () => {
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 500 }} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 500 }} domain={['dataMin - 100', 'dataMax + 100']} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 500 }} domain={['auto', 'auto']} />
                                     <Tooltip
                                         contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' }}
                                         labelStyle={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '8px' }}
